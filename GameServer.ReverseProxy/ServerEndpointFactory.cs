@@ -21,7 +21,7 @@ namespace GameServer.ReverseProxy
         
         public async Task<string> GetServerEndpoint(Guid matchId, Guid queueName)
         {
-            var response = await _multiplayerApi.GetMatch(new GetMatchRequest
+            var response = await _multiplayerApi.GetMatchAsync(new GetMatchRequest
             {
                 MatchId = matchId.ToString(),
                 QueueName = queueName.ToString()
@@ -38,15 +38,15 @@ namespace GameServer.ReverseProxy
 
             if (response.Error != null)
             {
-                _logger.LogError("{Request} failed: {Message}", nameof(_multiplayerApi.GetMatch),
+                _logger.LogError("{Request} failed: {Message}", nameof(_multiplayerApi.GetMatchAsync),
                     response.Error.GenerateErrorReport());
 
                 throw new Exception(response.Error.GenerateErrorReport());
             }
 
-            var uriBuilder = new UriBuilder(response.Result.FQDN)
+            var uriBuilder = new UriBuilder(response.Result.ServerDetails.Fqdn)
             {
-                Port = GetEndpointPortNumber(response.Result.Ports)
+                Port = GetEndpointPortNumber(response.Result.ServerDetails.Ports)
             };
 
             return uriBuilder.ToString();
