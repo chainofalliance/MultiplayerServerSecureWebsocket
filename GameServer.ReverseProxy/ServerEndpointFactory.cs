@@ -19,27 +19,26 @@ namespace GameServer.ReverseProxy
             _multiplayerApi = multiplayerApi;
         }
         
-        public async Task<string> GetServerEndpoint(Guid buildId, Guid sessionId, AzureRegion region)
+        public async Task<string> GetServerEndpoint(Guid matchId, Guid queueName)
         {
-            var response = await _multiplayerApi.GetMultiplayerServerDetailsAsync(new GetMultiplayerServerDetailsRequest
+            var response = await _multiplayerApi.GetMatch(new GetMatchRequest
             {
-                BuildId = buildId.ToString(),
-                SessionId = sessionId.ToString(),
-                Region = region.ToString()
+                MatchId = matchId.ToString(),
+                QueueName = queueName.ToString()
             });
 
             if (response.Error?.Error == PlayFabErrorCode.MultiplayerServerNotFound)
             {
                 _logger.LogError(
-                    "Server not found: Build ID = {BuildId}, Session ID = {SessionId}, Region = {Region}",
-                    buildId, sessionId, region);
+                    "Server not found: Match ID = {MatchId}, Queue Name = {QueueName}",
+                    matchId, queueName);
 
                 return null;
             }
 
             if (response.Error != null)
             {
-                _logger.LogError("{Request} failed: {Message}", nameof(_multiplayerApi.GetMultiplayerServerDetailsAsync),
+                _logger.LogError("{Request} failed: {Message}", nameof(_multiplayerApi.GetMatch),
                     response.Error.GenerateErrorReport());
 
                 throw new Exception(response.Error.GenerateErrorReport());

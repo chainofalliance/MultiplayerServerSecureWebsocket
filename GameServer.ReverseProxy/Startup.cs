@@ -96,16 +96,15 @@ namespace GameServer.ReverseProxy
             {
                 var logger = endpoints.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("ProxyEndpointHandler");
                 
-                endpoints.Map("/{buildId:guid}/{sessionId:guid}/{region}/{**forwardPath}", async context =>
+                endpoints.Map("/{matchId:guid}/{queueName:guid}/{**forwardPath}", async context =>
                 {
                     var detailsFactory = context.RequestServices.GetRequiredService<ServerEndpointFactory>();
 
                     var routeValues = context.GetRouteData().Values;
 
                     // respond with 400 Bad Request when the request path doesn't have the expected format
-                    if (!Guid.TryParse(routeValues["buildId"]?.ToString(), out var buildId) ||
-                        !Guid.TryParse(routeValues["sessionId"]?.ToString(), out var sessionId) ||
-                        !Enum.TryParse(routeValues["region"]?.ToString(), out AzureRegion region))
+                    if (!Guid.TryParse(routeValues["matchId"]?.ToString(), out var matchId) ||
+                        !Guid.TryParse(routeValues["queueName"]?.ToString(), out var queueName))
                     {
                         context.Response.StatusCode = (int) HttpStatusCode.BadRequest;
 
@@ -116,7 +115,7 @@ namespace GameServer.ReverseProxy
 
                     try
                     {
-                        serverEndpoint = await detailsFactory.GetServerEndpoint(buildId, sessionId, region);
+                        serverEndpoint = await detailsFactory.GetServerEndpoint(matchId, queueName);
                     }
                     catch (Exception)
                     {
@@ -146,7 +145,7 @@ namespace GameServer.ReverseProxy
     /// <summary>
     ///     Forwards the request path and query parameters to given game server URL
     /// </summary>
-    /// <example><c>/{buildId}/{sessionId}/{region}/some/path?test=true</c> is mapped to <c>{serverUrl}/some/path?test=true</c></example>
+    /// <example><c>/{gameId}/{queueName}/some/path?test=true</c> is mapped to <c>{serverUrl}/some/path?test=true</c></example>
     internal class GameServerRequestTransformer : HttpTransformer
     {
         public override async ValueTask TransformRequestAsync(HttpContext httpContext,
