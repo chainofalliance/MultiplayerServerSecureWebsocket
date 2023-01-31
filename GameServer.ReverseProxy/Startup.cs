@@ -96,22 +96,24 @@ namespace GameServer.ReverseProxy
             {
                 var logger = endpoints.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("ProxyEndpointHandler");
                 
-                endpoints.Map("/{matchId:guid}/{queueName:guid}/{**forwardPath}", async context =>
+                endpoints.Map("/{matchId:guid}/{queueName}/{**forwardPath}", async context =>
                 {
                     var detailsFactory = context.RequestServices.GetRequiredService<ServerEndpointFactory>();
 
                     var routeValues = context.GetRouteData().Values;
 
                     // respond with 400 Bad Request when the request path doesn't have the expected format
-                    if (!Guid.TryParse(routeValues["matchId"]?.ToString(), out var matchId) ||
-                        !Guid.TryParse(routeValues["queueName"]?.ToString(), out var queueName))
+                    if (!Guid.TryParse(routeValues["matchId"]?.ToString(), out var matchId))
                     {
                         context.Response.StatusCode = (int) HttpStatusCode.BadRequest;
 
                         return;
                     }
-
+                    string queueName = routeValues["queueName"]?.ToString();
                     string serverEndpoint = null;
+
+                    System.Console.WriteLine(queueName);
+                     System.Console.WriteLine(matchId);
 
                     try
                     {

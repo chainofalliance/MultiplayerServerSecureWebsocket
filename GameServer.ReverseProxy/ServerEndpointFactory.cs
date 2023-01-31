@@ -19,7 +19,7 @@ namespace GameServer.ReverseProxy
             _multiplayerApi = multiplayerApi;
         }
         
-        public async Task<string> GetServerEndpoint(Guid matchId, Guid queueName)
+        public async Task<string> GetServerEndpoint(Guid matchId, string queueName)
         {
             var response = await _multiplayerApi.GetMatchAsync(new GetMatchRequest
             {
