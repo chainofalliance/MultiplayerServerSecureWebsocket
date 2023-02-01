@@ -133,10 +133,18 @@ namespace GameServer.ReverseProxy
                         return;
                     }
 
-                    await forwarder.SendAsync(context,
+                    var error = await forwarder.SendAsync(context,
                         serverEndpoint,
                         httpClient, requestOptions,
                         transformer);
+                    
+                    if(error != ForwarderError.None) 
+                    {
+                        var errorFeature = context.GetForwarderErrorFeature();
+                        var exception = errorFeature.Exception;
+
+                        System.Console.WriteLine(exception);
+                    }
                 });
             });
 
