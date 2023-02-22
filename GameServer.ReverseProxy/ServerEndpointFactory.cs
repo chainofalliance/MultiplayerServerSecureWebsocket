@@ -12,13 +12,45 @@ namespace GameServer.ReverseProxy
     {
         private readonly ILogger _logger;
         private readonly PlayFabMultiplayerInstanceAPI _multiplayerApi;
-        
+
         public ServerEndpointFactory(ILoggerFactory loggerFactory, PlayFabMultiplayerInstanceAPI multiplayerApi)
         {
             _logger = loggerFactory.CreateLogger<ServerEndpointFactory>();
             _multiplayerApi = multiplayerApi;
         }
-        
+
+        public async Task<string> RequestMultiplayerServer()
+        {
+            var response = await _multiplayerApi.RequestMultiplayerServerAsync(new RequestMultiplayerServerRequest
+            {
+                PreferredRegions = new List<string>() { "NorthEurope" },
+                SessionId = Guid.NewGuid().ToString(),
+                BuildId = "368422f8-16d1-40a2-8749-10e34ce75e87",
+            });
+
+            if (response.Error?.Error == PlayFabErrorCode.MultiplayerServerBadRequest)
+            {
+                _logger.LogError(
+                    "Failed to request a mulitplayer server");
+                return null;
+            }
+
+            if (response.Error != null)
+            {
+                _logger.LogError("{Request} failed: {Message}", nameof(_multiplayerApi.RequestMultiplayerServerAsync),
+                    response.Error.GenerateErrorReport());
+
+                throw new Exception(response.Error.GenerateErrorReport());
+            }
+
+            var uriBuilder = new UriBuilder(response.Result.FQDN)
+            {
+                Port = GetEndpointPortNumber(response.Result.Ports)
+            };
+
+            return uriBuilder.ToString();
+        }
+
         public async Task<string> GetServerEndpoint(Guid matchId, string queueName)
         {
             var response = await _multiplayerApi.GetMatchAsync(new GetMatchRequest

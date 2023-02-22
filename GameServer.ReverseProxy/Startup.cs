@@ -24,7 +24,7 @@ namespace GameServer.ReverseProxy
         public string TitleId { get; set; }
         public string SecretKey { get; set; }
     }
-    
+
     public class Startup
     {
         private readonly IConfiguration _configuration;
@@ -51,7 +51,7 @@ namespace GameServer.ReverseProxy
             services.AddSingleton<PlayFabAuthenticationInstanceAPI>(_ =>
             {
                 var playfabConfig = _configuration.GetSection("PlayFab").Get<PlayFabSettings>();
-                
+
                 return new(new PlayFabApiSettings
                 {
                     TitleId = playfabConfig.TitleId,
@@ -61,10 +61,10 @@ namespace GameServer.ReverseProxy
             services.AddTransient<PlayFabMultiplayerInstanceAPI>(context =>
             {
                 var authApi = context.GetRequiredService<PlayFabAuthenticationInstanceAPI>();
-                
+
                 // TODO: this should be cached until expiration (1 day)
                 var entityToken = authApi.GetEntityTokenAsync(new GetEntityTokenRequest());
-                
+
                 return new(authApi.apiSettings,
                         new PlayFabAuthenticationContext()
                         {
@@ -95,7 +95,7 @@ namespace GameServer.ReverseProxy
             app.UseEndpoints(endpoints =>
             {
                 var logger = endpoints.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("ProxyEndpointHandler");
-                
+
                 endpoints.Map("/{matchId:guid}/{queueName}/{**forwardPath}", async context =>
                 {
                     var detailsFactory = context.RequestServices.GetRequiredService<ServerEndpointFactory>();
@@ -105,7 +105,7 @@ namespace GameServer.ReverseProxy
                     // respond with 400 Bad Request when the request path doesn't have the expected format
                     if (!Guid.TryParse(routeValues["matchId"]?.ToString(), out var matchId))
                     {
-                        context.Response.StatusCode = (int) HttpStatusCode.BadRequest;
+                        context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
 
                         return;
                     }
@@ -113,7 +113,7 @@ namespace GameServer.ReverseProxy
                     string serverEndpoint = null;
 
                     System.Console.WriteLine(queueName);
-                     System.Console.WriteLine(matchId);
+                    System.Console.WriteLine(matchId);
 
                     try
                     {
@@ -121,14 +121,14 @@ namespace GameServer.ReverseProxy
                     }
                     catch (Exception)
                     {
-                        context.Response.StatusCode = (int) HttpStatusCode.InternalServerError;
+                        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                     }
-                    
+
                     // We couldn't find a server with this build/session/region
                     // The client should use the 404 status code to display a useful message like "This server was not found or is no longer available"
                     if (serverEndpoint == null)
                     {
-                        context.Response.StatusCode = (int) HttpStatusCode.NotFound;
+                        context.Response.StatusCode = (int)HttpStatusCode.NotFound;
 
                         return;
                     }
@@ -137,8 +137,45 @@ namespace GameServer.ReverseProxy
                         serverEndpoint,
                         httpClient, requestOptions,
                         transformer);
-                    
-                    if(error != ForwarderError.None) 
+
+                    if (error != ForwarderError.None)
+                    {
+                        var errorFeature = context.GetForwarderErrorFeature();
+                        var exception = errorFeature.Exception;
+
+                        System.Console.WriteLine(exception);
+                    }
+                });
+
+                endpoints.Map("/request-match", async context =>
+                {
+                    var detailsFactory = context.RequestServices.GetRequiredService<ServerEndpointFactory>();
+                    string serverEndpoint = null;
+
+                    try
+                    {
+                        serverEndpoint = await detailsFactory.RequestMultiplayerServer();
+                    }
+                    catch (Exception)
+                    {
+                        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                    }
+
+                    // We couldn't find a server with this build/session/region
+                    // The client should use the 404 status code to display a useful message like "This server was not found or is no longer available"
+                    if (serverEndpoint == null)
+                    {
+                        context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+
+                        return;
+                    }
+
+                    var error = await forwarder.SendAsync(context,
+                        serverEndpoint,
+                        httpClient, requestOptions,
+                        transformer);
+
+                    if (error != ForwarderError.None)
                     {
                         var errorFeature = context.GetForwarderErrorFeature();
                         var exception = errorFeature.Exception;
