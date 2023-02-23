@@ -19,13 +19,47 @@ namespace GameServer.ReverseProxy
             _multiplayerApi = multiplayerApi;
         }
 
-        public async Task<string> RequestMultiplayerServer()
+        public async Task<string> ListBuildAliases(string environment)
+        {
+            var response = await _multiplayerApi.ListBuildAliasesAsync(new ListBuildAliasesRequest
+            {
+            });
+
+            if (response.Error?.Error == PlayFabErrorCode.MultiplayerServerBadRequest)
+            {
+                _logger.LogError(
+                    "Failed to request a aliase");
+                return null;
+            }
+
+            if (response.Error != null)
+            {
+                _logger.LogError("{Request} failed: {Message}", nameof(_multiplayerApi.ListBuildAliasesAsync),
+                    response.Error.GenerateErrorReport());
+
+                throw new Exception(response.Error.GenerateErrorReport());
+            }
+
+            foreach (var alias in response.Result.BuildAliases)
+            {
+                if (alias.AliasName == environment)
+                {
+                    return alias.AliasId;
+                }
+            }
+
+            return null;
+        }
+
+        public async Task<string> RequestMultiplayerServer(string alias)
         {
             var response = await _multiplayerApi.RequestMultiplayerServerAsync(new RequestMultiplayerServerRequest
             {
                 PreferredRegions = new List<string>() { "NorthEurope" },
                 SessionId = Guid.NewGuid().ToString(),
-                BuildId = "368422f8-16d1-40a2-8749-10e34ce75e87",
+                BuildAliasParams = new BuildAliasParams { AliasId = alias },
+                SessionCookie = "AI"
+                // BuildId = "368422f8-16d1-40a2-8749-10e34ce75e87",
             });
 
             if (response.Error?.Error == PlayFabErrorCode.MultiplayerServerBadRequest)

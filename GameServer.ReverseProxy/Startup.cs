@@ -149,12 +149,23 @@ namespace GameServer.ReverseProxy
 
                 endpoints.Map("/request-match", async context =>
                 {
+                    var env = _configuration.GetSection("Environment").Get<string>();
                     var detailsFactory = context.RequestServices.GetRequiredService<ServerEndpointFactory>();
-                    string serverEndpoint = null;
 
+                    string alias = null;
                     try
                     {
-                        serverEndpoint = await detailsFactory.RequestMultiplayerServer();
+                        alias = await detailsFactory.ListBuildAliases(env);
+                    }
+                    catch (Exception)
+                    {
+                        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                    }
+
+                    string serverEndpoint = null;
+                    try
+                    {
+                        serverEndpoint = await detailsFactory.RequestMultiplayerServer(alias);
                     }
                     catch (Exception)
                     {
