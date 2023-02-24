@@ -147,9 +147,20 @@ namespace GameServer.ReverseProxy
                     }
                 });
 
-                endpoints.Map("/request-match", async context =>
+                endpoints.Map("/request-match/{matchId:guid}", async context =>
                 {
                     var env = _configuration.GetSection("Environment").Get<string>();
+
+                    var routeValues = context.GetRouteData().Values;
+
+                    // respond with 400 Bad Request when the request path doesn't have the expected format
+                    if (!Guid.TryParse(routeValues["matchId"]?.ToString(), out var matchId))
+                    {
+                        context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+
+                        return;
+                    }
+
                     var detailsFactory = context.RequestServices.GetRequiredService<ServerEndpointFactory>();
 
                     string alias = null;
@@ -165,7 +176,7 @@ namespace GameServer.ReverseProxy
                     string serverEndpoint = null;
                     try
                     {
-                        serverEndpoint = await detailsFactory.RequestMultiplayerServer(alias);
+                        serverEndpoint = await detailsFactory.RequestMultiplayerServer(alias, matchId);
                     }
                     catch (Exception)
                     {

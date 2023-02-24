@@ -51,15 +51,14 @@ namespace GameServer.ReverseProxy
             return null;
         }
 
-        public async Task<string> RequestMultiplayerServer(string alias)
+        public async Task<string> RequestMultiplayerServer(string alias, Guid matchId)
         {
             var response = await _multiplayerApi.RequestMultiplayerServerAsync(new RequestMultiplayerServerRequest
             {
                 PreferredRegions = new List<string>() { "NorthEurope" },
-                SessionId = Guid.NewGuid().ToString(),
+                SessionId = matchId.ToString(),
                 BuildAliasParams = new BuildAliasParams { AliasId = alias },
                 SessionCookie = "AI"
-                // BuildId = "368422f8-16d1-40a2-8749-10e34ce75e87",
             });
 
             if (response.Error?.Error == PlayFabErrorCode.MultiplayerServerBadRequest)
