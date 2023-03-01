@@ -51,6 +51,58 @@ namespace GameServer.ReverseProxy
             return null;
         }
 
+        public async Task<GetMatchmakingTicketResult> GetMatchmakingTicket(string ticketId, string queueName)
+        {
+            var response = await _multiplayerApi.GetMatchmakingTicketAsync(new GetMatchmakingTicketRequest
+            {
+                TicketId = ticketId,
+                QueueName = queueName
+            });
+
+            if (response.Error?.Error == PlayFabErrorCode.MatchmakingTicketNotFound)
+            {
+                _logger.LogError(
+                    "Matchmaking ticket not found");
+                return null;
+            }
+
+            if (response.Error != null)
+            {
+                _logger.LogError("{Request} failed: {Message}", nameof(_multiplayerApi.GetMatchmakingTicketAsync),
+                    response.Error.GenerateErrorReport());
+
+                throw new Exception(response.Error.GenerateErrorReport());
+            }
+
+            return response.Result;
+        }
+
+        public async Task<bool> CancelMatchmakingTicket(string ticketId, string queueName)
+        {
+            var response = await _multiplayerApi.CancelMatchmakingTicketAsync(new CancelMatchmakingTicketRequest
+            {
+                TicketId = ticketId,
+                QueueName = queueName
+            });
+
+            if (response.Error?.Error == PlayFabErrorCode.MatchmakingTicketNotFound)
+            {
+                _logger.LogError(
+                    "Matchmaking ticket not found");
+                return false;
+            }
+
+            if (response.Error != null)
+            {
+                _logger.LogError("{Request} failed: {Message}", nameof(_multiplayerApi.CancelMatchmakingTicketAsync),
+                    response.Error.GenerateErrorReport());
+
+                throw new Exception(response.Error.GenerateErrorReport());
+            }
+
+            return true;
+        }
+
         public async Task<string> RequestMultiplayerServer(string alias, Guid matchId)
         {
             var response = await _multiplayerApi.RequestMultiplayerServerAsync(new RequestMultiplayerServerRequest
