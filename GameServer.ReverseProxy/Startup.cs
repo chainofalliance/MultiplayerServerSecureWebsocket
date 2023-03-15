@@ -309,6 +309,7 @@ namespace GameServer.ReverseProxy
                 });
             });
 
+            app.UseHealthChecks("/healthz");
             app.UseCors();
         }
     }
