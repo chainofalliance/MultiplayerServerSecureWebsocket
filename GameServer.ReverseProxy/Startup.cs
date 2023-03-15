@@ -47,6 +47,8 @@ namespace GameServer.ReverseProxy
                 });
             });
 
+            services.AddHealthChecks();
+
             services.AddHttpForwarder();
             services.AddSingleton<PlayFabAuthenticationInstanceAPI>(_ =>
             {
