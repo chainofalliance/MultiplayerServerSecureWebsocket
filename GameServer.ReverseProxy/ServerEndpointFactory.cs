@@ -10,13 +10,31 @@ namespace GameServer.ReverseProxy
 {
     public class ServerEndpointFactory
     {
+        public static DateTime? TokenExpiration = null;
         private readonly ILogger _logger;
         private readonly PlayFabMultiplayerInstanceAPI _multiplayerApi;
+        private readonly PlayFabAuthenticationInstanceAPI _authApi;
 
-        public ServerEndpointFactory(ILoggerFactory loggerFactory, PlayFabMultiplayerInstanceAPI multiplayerApi)
+        public ServerEndpointFactory(
+            ILoggerFactory loggerFactory,
+            PlayFabMultiplayerInstanceAPI multiplayerApi,
+            PlayFabAuthenticationInstanceAPI authApi
+        )
         {
             _logger = loggerFactory.CreateLogger<ServerEndpointFactory>();
             _multiplayerApi = multiplayerApi;
+            _authApi = authApi;
+        }
+
+        public async Task ValidateEntityToken() {
+            if (TokenExpiration == null
+                || TokenExpiration.Value < DateTime.Now)
+            {
+                var entityToken = await _authApi.GetEntityTokenAsync(new PlayFab.AuthenticationModels.GetEntityTokenRequest());
+                _multiplayerApi.authenticationContext.EntityToken = entityToken.Result.EntityToken;
+                TokenExpiration = entityToken.Result.TokenExpiration;
+                _logger.LogWarning($"Refreshed entity token. Expires at {TokenExpiration}");
+            }
         }
 
         public async Task<string> ListBuildAliases(string environment)
@@ -28,7 +46,7 @@ namespace GameServer.ReverseProxy
             if (response.Error?.Error == PlayFabErrorCode.MultiplayerServerBadRequest)
             {
                 _logger.LogError(
-                    "Failed to request a aliase");
+                    "Failed to request an alias");
                 return null;
             }
 
@@ -116,7 +134,7 @@ namespace GameServer.ReverseProxy
             if (response.Error?.Error == PlayFabErrorCode.MultiplayerServerBadRequest)
             {
                 _logger.LogError(
-                    "Failed to request a mulitplayer server");
+                    "Failed to request a multiplayer server");
                 return null;
             }
 

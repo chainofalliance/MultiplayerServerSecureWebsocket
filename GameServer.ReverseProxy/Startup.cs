@@ -46,7 +46,6 @@ namespace GameServer.ReverseProxy
                         .AllowCredentials();
                 });
             });
-
             services.AddHealthChecks();
 
             services.AddHttpForwarder();
@@ -63,9 +62,9 @@ namespace GameServer.ReverseProxy
             services.AddTransient<PlayFabMultiplayerInstanceAPI>(context =>
             {
                 var authApi = context.GetRequiredService<PlayFabAuthenticationInstanceAPI>();
-
-                // TODO: this should be cached until expiration (1 day)
                 var entityToken = authApi.GetEntityTokenAsync(new GetEntityTokenRequest());
+
+                ServerEndpointFactory.TokenExpiration = entityToken.Result.Result.TokenExpiration;
 
                 return new(authApi.apiSettings,
                         new PlayFabAuthenticationContext()
@@ -73,7 +72,14 @@ namespace GameServer.ReverseProxy
                             EntityToken = entityToken.Result.Result.EntityToken
                         });
             });
-            services.AddSingleton<ServerEndpointFactory>();
+            
+            services.AddSingleton<ServerEndpointFactory>(context => {
+                return new(
+                    context.GetRequiredService<ILoggerFactory>(),
+                    context.GetRequiredService<PlayFabMultiplayerInstanceAPI>(),
+                    context.GetRequiredService<PlayFabAuthenticationInstanceAPI>()
+                );
+            });
             services.AddReverseProxy().LoadFromConfig(_configuration.GetSection("ReverseProxy"));
         }
 
@@ -101,6 +107,7 @@ namespace GameServer.ReverseProxy
                 endpoints.Map("/{matchId:guid}/{queueName}/{**forwardPath}", async context =>
                 {
                     var detailsFactory = context.RequestServices.GetRequiredService<ServerEndpointFactory>();
+                    await detailsFactory.ValidateEntityToken();
 
                     var routeValues = context.GetRouteData().Values;
 
@@ -165,6 +172,7 @@ namespace GameServer.ReverseProxy
                     }
 
                     var detailsFactory = context.RequestServices.GetRequiredService<ServerEndpointFactory>();
+                    await detailsFactory.ValidateEntityToken();
 
                     string alias = null;
                     try
@@ -234,6 +242,7 @@ namespace GameServer.ReverseProxy
                     }
 
                     var detailsFactory = context.RequestServices.GetRequiredService<ServerEndpointFactory>();
+                    await detailsFactory.ValidateEntityToken();
 
                     try
                     {
