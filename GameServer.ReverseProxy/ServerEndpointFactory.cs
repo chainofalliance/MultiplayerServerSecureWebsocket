@@ -33,7 +33,7 @@ namespace GameServer.ReverseProxy
                 _multiplayerApi.authenticationContext.EntityToken = null;
 
                 var entityToken = await _authApi.GetEntityTokenAsync(new PlayFab.AuthenticationModels.GetEntityTokenRequest());
-                if (entityToken.Error.Error != PlayFabErrorCode.Success)
+                if (entityToken.Error != null)
                 {
                     _logger.LogError($"Failed to ValidateEntityToken: {entityToken.Error.GenerateErrorReport()}");
                     return;
