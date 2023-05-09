@@ -30,9 +30,18 @@ namespace GameServer.ReverseProxy
             if (TokenExpiration == default(DateTime)
                 || TokenExpiration < DateTime.UtcNow)
             {
+                _multiplayerApi.authenticationContext.EntityToken = null;
+
                 var entityToken = await _authApi.GetEntityTokenAsync(new PlayFab.AuthenticationModels.GetEntityTokenRequest());
+                if (entityToken.Error.Error != PlayFabErrorCode.Success)
+                {
+                    _logger.LogError($"Failed to ValidateEntityToken: {entityToken.Error.GenerateErrorReport()}");
+                    return;
+                }
+
                 _multiplayerApi.authenticationContext.EntityToken = entityToken.Result.EntityToken;
                 TokenExpiration = entityToken.Result.TokenExpiration.Value;
+
                 _logger.LogWarning($"Refreshed entity token. Expires at {TokenExpiration}");
             }
         }
