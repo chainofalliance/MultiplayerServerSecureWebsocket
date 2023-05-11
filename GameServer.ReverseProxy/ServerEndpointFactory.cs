@@ -30,7 +30,7 @@ namespace GameServer.ReverseProxy
             if (TokenExpiration == default(DateTime)
                 || TokenExpiration < DateTime.UtcNow)
             {
-                _multiplayerApi.authenticationContext.EntityToken = null;
+                _multiplayerApi.authenticationContext.ForgetAllCredentials();
 
                 var entityToken = await _authApi.GetEntityTokenAsync(new PlayFab.AuthenticationModels.GetEntityTokenRequest());
                 if (entityToken.Error != null)
