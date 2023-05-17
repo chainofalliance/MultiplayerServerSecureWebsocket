@@ -31,12 +31,12 @@ namespace GameServer.ReverseProxy
             if (TokenExpiration == default(DateTime)
                 || TokenExpiration < DateTime.UtcNow)
             {
+                _authApi.authenticationContext.PlayFabId = _authApi.authenticationContext.EntityId;
                 Console.WriteLine("ValidateEntityToken: IsEntityLoggedIn" + _authApi.IsEntityLoggedIn());
                 Console.WriteLine("ValidateEntityToken: TitleId" + _authApi.apiSettings.TitleId);
                 Console.WriteLine("ValidateEntityToken: ssc" + _authApi.apiSettings.DeveloperSecretKey);
                 Console.WriteLine("ValidateEntityToken: authenticationContext.EntityId" + _authApi.authenticationContext.EntityId);
                 Console.WriteLine("ValidateEntityToken: authenticationContext.PlayFabId" + _authApi.authenticationContext.PlayFabId);
-
                 var entityToken = await _authApi.GetEntityTokenAsync(new PlayFab.AuthenticationModels.GetEntityTokenRequest());
                 Console.WriteLine("ValidateEntityToken: entityToken id" + entityToken.Result.Entity.Id);
                 Console.WriteLine("ValidateEntityToken: entityToken type" + entityToken.Result.Entity.Type);
