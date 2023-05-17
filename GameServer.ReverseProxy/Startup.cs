@@ -67,12 +67,14 @@ namespace GameServer.ReverseProxy
                 return new PlayFabMultiplayerInstanceAPI(authApi.apiSettings,
                         new PlayFabAuthenticationContext());
             });
-            
-            services.AddSingleton<ServerEndpointFactory>(context => {
+
+            services.AddSingleton<ServerEndpointFactory>(context =>
+            {
                 return new(
                     context.GetRequiredService<ILoggerFactory>(),
                     context.GetRequiredService<PlayFabMultiplayerInstanceAPI>(),
-                    context.GetRequiredService<PlayFabAuthenticationInstanceAPI>()
+                    context.GetRequiredService<PlayFabAuthenticationInstanceAPI>(),
+                    _configuration
                 );
             });
             services.AddReverseProxy().LoadFromConfig(_configuration.GetSection("ReverseProxy"));

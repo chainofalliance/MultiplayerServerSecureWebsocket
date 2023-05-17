@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PlayFab;
 using PlayFab.MultiplayerModels;
+using Microsoft.Extensions.Configuration;
 
 namespace GameServer.ReverseProxy
 {
@@ -12,18 +13,32 @@ namespace GameServer.ReverseProxy
     {
         public static DateTime TokenExpiration = default;
         private readonly ILogger _logger;
-        private readonly PlayFabMultiplayerInstanceAPI _multiplayerApi;
+        private PlayFabMultiplayerInstanceAPI _multiplayerApi;
         private readonly PlayFabAuthenticationInstanceAPI _authApi;
+        private readonly IConfiguration _configuration;
 
         public ServerEndpointFactory(
             ILoggerFactory loggerFactory,
             PlayFabMultiplayerInstanceAPI multiplayerApi,
-            PlayFabAuthenticationInstanceAPI authApi
+            PlayFabAuthenticationInstanceAPI authApi,
+            IConfiguration configuration
         )
         {
             _logger = loggerFactory.CreateLogger<ServerEndpointFactory>();
             _multiplayerApi = multiplayerApi;
             _authApi = authApi;
+            _configuration = configuration;
+        }
+
+        private PlayFabApiSettings FabSettingAPI()
+        {
+            var playfabConfig = _configuration.GetSection("PlayFab").Get<PlayFabSettings>();
+
+            return new PlayFabApiSettings
+            {
+                TitleId = playfabConfig.TitleId,
+                DeveloperSecretKey = playfabConfig.SecretKey
+            };
         }
 
         public async Task ValidateEntityToken()
@@ -31,30 +46,28 @@ namespace GameServer.ReverseProxy
             if (TokenExpiration == default(DateTime)
                 || TokenExpiration < DateTime.UtcNow)
             {
-                _authApi.authenticationContext.PlayFabId = _authApi.authenticationContext.EntityId;
-                Console.WriteLine("ValidateEntityToken: IsEntityLoggedIn" + _authApi.IsEntityLoggedIn());
-                Console.WriteLine("ValidateEntityToken: TitleId" + _authApi.apiSettings.TitleId);
-                Console.WriteLine("ValidateEntityToken: ssc" + _authApi.apiSettings.DeveloperSecretKey);
-                Console.WriteLine("ValidateEntityToken: authenticationContext.EntityId" + _authApi.authenticationContext.EntityId);
-                Console.WriteLine("ValidateEntityToken: authenticationContext.PlayFabId" + _authApi.authenticationContext.PlayFabId);
-                var entityToken = await _authApi.GetEntityTokenAsync(new PlayFab.AuthenticationModels.GetEntityTokenRequest());
-                Console.WriteLine("ValidateEntityToken: entityToken id" + entityToken.Result.Entity.Id);
-                Console.WriteLine("ValidateEntityToken: entityToken type" + entityToken.Result.Entity.Type);
-                Console.WriteLine("ValidateEntityToken: entityToken entityToken" + entityToken.Result.EntityToken);
+                var entityTokenRequest = new PlayFab.AuthenticationModels.GetEntityTokenRequest();
+                var authApi = new PlayFab.PlayFabAuthenticationInstanceAPI(FabSettingAPI());
+                var entityTokenResult = await authApi.GetEntityTokenAsync(entityTokenRequest);
 
-                if (entityToken.Error != null)
+                if (entityTokenResult.Error != null)
                 {
-                    _logger.LogError($"Failed to ValidateEntityToken: {entityToken.Error.GenerateErrorReport()}");
+                    _logger.LogError($"Failed to ValidateEntityToken: {entityTokenResult.Error.GenerateErrorReport()}");
                     return;
                 }
 
-                _multiplayerApi.authenticationContext.EntityToken = entityToken.Result.EntityToken;
-                TokenExpiration = entityToken.Result.TokenExpiration.Value;
+                var authContext = new PlayFabAuthenticationContext
+                {
+                    EntityId = entityTokenResult.Result.Entity.Id,
+                    EntityType = entityTokenResult.Result.Entity.Type,
+                    EntityToken = entityTokenResult.Result.EntityToken
+                };
 
+                _multiplayerApi = new PlayFabMultiplayerInstanceAPI(FabSettingAPI(), authContext);
+
+                TokenExpiration = entityTokenResult.Result.TokenExpiration.Value;
                 _logger.LogWarning($"Refreshed entity token. Expires at {TokenExpiration}");
             }
-
-            Console.WriteLine("ValidateEntityToken: IsEntityLoggedIn" + _authApi.IsEntityLoggedIn());
         }
 
         public async Task<string> ListBuildAliases(string environment)
