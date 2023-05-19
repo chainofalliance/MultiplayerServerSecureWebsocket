@@ -9,9 +9,6 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using PlayFab;
-using PlayFab.AuthenticationModels;
-using PlayFab.MultiplayerModels;
 using Yarp.ReverseProxy.Forwarder;
 
 namespace GameServer.ReverseProxy
@@ -49,31 +46,11 @@ namespace GameServer.ReverseProxy
             services.AddHealthChecks();
 
             services.AddHttpForwarder();
-            services.AddSingleton<PlayFabAuthenticationInstanceAPI>(_ =>
-            {
-                var playfabConfig = _configuration.GetSection("PlayFab").Get<PlayFabSettings>();
-
-                return new(new PlayFabApiSettings
-                {
-                    TitleId = playfabConfig.TitleId,
-                    DeveloperSecretKey = playfabConfig.SecretKey,
-                });
-            });
-
-            services.AddTransient<PlayFabMultiplayerInstanceAPI>(context =>
-            {
-                var authApi = context.GetRequiredService<PlayFabAuthenticationInstanceAPI>();
-
-                return new PlayFabMultiplayerInstanceAPI(authApi.apiSettings,
-                        new PlayFabAuthenticationContext());
-            });
 
             services.AddSingleton<ServerEndpointFactory>(context =>
             {
                 return new(
                     context.GetRequiredService<ILoggerFactory>(),
-                    context.GetRequiredService<PlayFabMultiplayerInstanceAPI>(),
-                    context.GetRequiredService<PlayFabAuthenticationInstanceAPI>(),
                     _configuration
                 );
             });

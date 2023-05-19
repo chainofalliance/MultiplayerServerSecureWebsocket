@@ -14,19 +14,14 @@ namespace GameServer.ReverseProxy
         public static DateTime TokenExpiration = default;
         private readonly ILogger _logger;
         private PlayFabMultiplayerInstanceAPI _multiplayerApi;
-        private readonly PlayFabAuthenticationInstanceAPI _authApi;
         private readonly IConfiguration _configuration;
 
         public ServerEndpointFactory(
             ILoggerFactory loggerFactory,
-            PlayFabMultiplayerInstanceAPI multiplayerApi,
-            PlayFabAuthenticationInstanceAPI authApi,
             IConfiguration configuration
         )
         {
             _logger = loggerFactory.CreateLogger<ServerEndpointFactory>();
-            _multiplayerApi = multiplayerApi;
-            _authApi = authApi;
             _configuration = configuration;
         }
 
