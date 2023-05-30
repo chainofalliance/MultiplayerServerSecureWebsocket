@@ -191,84 +191,29 @@ namespace GameServer.ReverseProxy
                     }
                 });
 
-                endpoints.Map("/request-match/{playfabId}/{ticketId}/{queueName}/{matchId:guid}", async context =>
+                endpoints.Map("/{matchId:guid}", async context =>
                 {
-                    var env = _configuration.GetSection("Environment").Get<string>();
+                    var detailsFactory = context.RequestServices.GetRequiredService<ServerEndpointFactory>();
+                    await detailsFactory.ValidateEntityToken();
 
                     var routeValues = context.GetRouteData().Values;
-
-                    string playfabId = routeValues["playfabId"]?.ToString();
-                    string ticketId = routeValues["ticketId"]?.ToString();
-                    string queueName = routeValues["queueName"]?.ToString();
-                    string serverEndpoint = null;
 
                     // respond with 400 Bad Request when the request path doesn't have the expected format
                     if (!Guid.TryParse(routeValues["matchId"]?.ToString(), out var matchId))
                     {
                         context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+
                         return;
                     }
-
-                    if (playfabId == null || ticketId == null || queueName == null)
-                    {
-                        context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                        return;
-                    }
-
-                    var detailsFactory = context.RequestServices.GetRequiredService<ServerEndpointFactory>();
-                    await detailsFactory.ValidateEntityToken();
+                    string serverEndpoint = null;
 
                     try
                     {
-                        var ticketResult = await detailsFactory.GetMatchmakingTicket(ticketId, queueName);
-
-                        System.Console.WriteLine("creator: " + ticketResult.Creator.Id);
-                        System.Console.WriteLine("playfabId: " + playfabId);
-                        System.Console.WriteLine("Status: " + ticketResult.Status);
-
-                        var inTicket = ticketResult.Members.Find(elem => elem.Entity.Id.Equals(playfabId));
-                        if (inTicket == null)
-                        {
-                            throw new Exception("PlayfabId: " + playfabId + " not in ticket");
-                        }
-
-                        if (ticketResult.Status.Equals("WaitingForServer") || ticketResult.Status.Equals("Matched"))
-                        {
-                            serverEndpoint = await detailsFactory.GetServerEndpoint(matchId, queueName);
-                        }
-                        else if (ticketResult.Status.Equals("WaitingForMatch") || ticketResult.Status.Equals("WaitingForPlayers"))
-                        {
-                            System.Console.WriteLine("Created: " + ticketResult.Created);
-                            var diffInSeconds = (ticketResult.Created - DateTime.Now).TotalSeconds;
-
-                            System.Console.WriteLine("diffInSeconds: " + diffInSeconds);
-                            if (diffInSeconds < 30)
-                            {
-                                throw new Exception("Ticket not old enough to start a server. Diff: " + diffInSeconds);
-                            }
-
-                            var isCanceled = await detailsFactory.CancelMatchmakingTicket(ticketId, queueName);
-
-                            if (isCanceled == false)
-                            {
-                                throw new Exception("Error during canceling ticket");
-                            }
-
-                            var alias = await detailsFactory.ListBuildAliases(env);
-
-                            if (alias == null)
-                            {
-                                throw new Exception("No aliases found");
-                            }
-
-                            serverEndpoint = await detailsFactory.RequestMultiplayerServer(alias, matchId);
-                        }
+                        serverEndpoint = await detailsFactory.GetMultiplayerServerDetails(matchId);
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
-                        System.Console.WriteLine(e.Message);
                         context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                        return;
                     }
 
                     // We couldn't find a server with this build/session/region
@@ -276,6 +221,7 @@ namespace GameServer.ReverseProxy
                     if (serverEndpoint == null)
                     {
                         context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+
                         return;
                     }
 
