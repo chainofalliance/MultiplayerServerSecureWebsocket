@@ -69,7 +69,7 @@ namespace GameServer.ReverseProxy
 
             var requestOptions = new ForwarderRequestConfig
             {
-                ActivityTimeout = TimeSpan.FromSeconds(5)
+                ActivityTimeout = TimeSpan.FromSeconds(30)
             };
             var transformer = new GameServerRequestTransformer();
 
