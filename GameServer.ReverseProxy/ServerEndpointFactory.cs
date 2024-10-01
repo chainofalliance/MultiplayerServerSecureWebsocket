@@ -65,6 +65,71 @@ namespace GameServer.ReverseProxy
             }
         }
 
+        public async Task<string> ListBuildAliases(string environment)
+        {
+            var response = await _multiplayerApi.ListBuildAliasesAsync(new ListBuildAliasesRequest
+            {
+            });
+
+            if (response.Error?.Error == PlayFabErrorCode.MultiplayerServerBadRequest)
+            {
+                _logger.LogError(
+                    "Failed to request an alias");
+                return null;
+            }
+
+            if (response.Error != null)
+            {
+                _logger.LogError("{Request} failed: {Message}", nameof(_multiplayerApi.ListBuildAliasesAsync),
+                    response.Error.GenerateErrorReport());
+
+                throw new Exception(response.Error.GenerateErrorReport());
+            }
+
+            foreach (var alias in response.Result.BuildAliases)
+            {
+                if (alias.AliasName == environment)
+                {
+                    return alias.AliasId;
+                }
+            }
+
+            return null;
+        }
+
+        public async Task<string> RequestMultiplayerServer(string alias, Guid matchId)
+        {
+            var response = await _multiplayerApi.RequestMultiplayerServerAsync(new RequestMultiplayerServerRequest
+            {
+                PreferredRegions = new List<string>() { "NorthEurope" },
+                SessionId = matchId.ToString(),
+                BuildAliasParams = new BuildAliasParams { AliasId = alias },
+                SessionCookie = "AI"
+            });
+
+            if (response.Error?.Error == PlayFabErrorCode.MultiplayerServerBadRequest)
+            {
+                _logger.LogError(
+                    "Failed to request a multiplayer server");
+                return null;
+            }
+
+            if (response.Error != null)
+            {
+                _logger.LogError("{Request} failed: {Message}", nameof(_multiplayerApi.RequestMultiplayerServerAsync),
+                    response.Error.GenerateErrorReport());
+
+                throw new Exception(response.Error.GenerateErrorReport());
+            }
+
+            var uriBuilder = new UriBuilder(response.Result.FQDN)
+            {
+                Port = GetEndpointPortNumber(response.Result.Ports)
+            };
+
+            return uriBuilder.ToString();
+        }
+
         public async Task<string> GetServerEndpoint(Guid matchId, string queueName)
         {
             var response = await _multiplayerApi.GetMatchAsync(new GetMatchRequest
