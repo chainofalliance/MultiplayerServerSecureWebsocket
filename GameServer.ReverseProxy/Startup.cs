@@ -173,6 +173,8 @@ namespace GameServer.ReverseProxy
                         return;
                     }
 
+                    await Task.Delay(new TimeSpan(0, 0, 5));
+
                     var error = await forwarder.SendAsync(context,
                         serverEndpoint,
                         httpClient, requestOptions,
