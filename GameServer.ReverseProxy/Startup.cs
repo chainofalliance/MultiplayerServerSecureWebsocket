@@ -76,7 +76,7 @@ namespace GameServer.ReverseProxy
             app.UseRouting();
             app.UseEndpoints(endpoints =>
             {
-                endpoints.Map("/{matchId:guid}/{queueName}/{**forwardPath}", async context =>
+                endpoints.Map("/{matchId:guid}/{queueName}", async context =>
                 {
                     Console.WriteLine("MATCH ROUTE");
                     var detailsFactory = context.RequestServices.GetRequiredService<ServerEndpointFactory>();
@@ -126,7 +126,7 @@ namespace GameServer.ReverseProxy
                     }
                 });
 
-                endpoints.Map("/request-match/{matchId:guid}/{**forwardPath}", async context =>
+                endpoints.Map("/request-match/{matchId:guid}", async context =>
                 {
                     Console.WriteLine("REQUEST MATCH ROUTE");
                     var env = _configuration.GetSection("Environment").Get<string>();
