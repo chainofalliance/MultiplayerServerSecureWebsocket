@@ -76,8 +76,6 @@ namespace GameServer.ReverseProxy
             app.UseRouting();
             app.UseEndpoints(endpoints =>
             {
-                var logger = endpoints.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("ProxyEndpointHandler");
-
                 endpoints.Map("/{matchId:guid}/{queueName}/{**forwardPath}", async context =>
                 {
                     Console.WriteLine("MATCH ROUTE");
@@ -141,7 +139,7 @@ namespace GameServer.ReverseProxy
                         context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                         return;
                     }
-                    logger.LogDebug($"Request server for matchid {matchId}");
+                    Console.WriteLine($"Request server for matchid {matchId}");
 
                     var detailsFactory = context.RequestServices.GetRequiredService<ServerEndpointFactory>();
                     await detailsFactory.ValidateEntityToken();
@@ -179,16 +177,16 @@ namespace GameServer.ReverseProxy
                     var RETRY_MAX = 10;
                     while(true) {
                         var details = await detailsFactory.GetMultiplayerServerDetails(matchId);
-                        logger.LogDebug($"Get server details for {matchId} in state {details.State}");
+                        Console.WriteLine($"Get server details for {matchId} in state {details.State}");
 
                         if(details.State == "Terminating" || retryCounter == RETRY_MAX) {
                             context.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
-                            logger.LogDebug($"Server for matchid {matchId} terminating or retry counter hit..");
+                            Console.WriteLine($"Server for matchid {matchId} terminating or retry counter hit..");
                             return;
                         }
 
                         if(details.State == "Active") {
-                            logger.LogDebug($"Server for matchid {matchId} active .. starting forwarder..");
+                            Console.WriteLine($"Server for matchid {matchId} active .. starting forwarder..");
                             var uriBuilder = new UriBuilder(details.FQDN)
                             {
                                 Port = ServerEndpointFactory.GetEndpointPortNumber(details.Ports)
@@ -213,7 +211,7 @@ namespace GameServer.ReverseProxy
                         var errorFeature = context.GetForwarderErrorFeature();
                         var exception = errorFeature.Exception;
 
-                        logger.LogDebug(exception.Message);
+                        Console.WriteLine(exception.Message);
                     }
                 });
             });
