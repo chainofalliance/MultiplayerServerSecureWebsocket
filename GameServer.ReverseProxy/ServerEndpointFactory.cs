@@ -163,7 +163,32 @@ namespace GameServer.ReverseProxy
             return uriBuilder.ToString();
         }
 
-        private static int GetEndpointPortNumber(IEnumerable<Port> ports)
+        public async Task<GetMultiplayerServerDetailsResponse> GetMultiplayerServerDetails(Guid sessionId)
+        {
+            var response = await _multiplayerApi.GetMultiplayerServerDetailsAsync(new GetMultiplayerServerDetailsRequest
+            {
+                SessionId = sessionId.ToString()
+            });
+
+            if (response.Error?.Error == PlayFabErrorCode.MultiplayerServerNotFound)
+            {
+                _logger.LogError("Server not found: Session ID = {sessionId}", sessionId);
+                return null;
+            }
+
+            if (response.Error != null)
+            {
+                _logger.LogError("{Request} failed: {Message}", nameof(_multiplayerApi.GetMultiplayerServerDetailsAsync),
+                    response.Error.GenerateErrorReport());
+
+                throw new Exception(response.Error.GenerateErrorReport());
+            }
+
+            return response.Result;
+        }
+
+
+        public static int GetEndpointPortNumber(IEnumerable<Port> ports)
         {
             // replace this logic with whatever is configured for your build i.e. getting a port by name
             return ports.First().Num;

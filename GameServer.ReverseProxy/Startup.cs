@@ -123,7 +123,7 @@ namespace GameServer.ReverseProxy
                         var errorFeature = context.GetForwarderErrorFeature();
                         var exception = errorFeature.Exception;
 
-                        System.Console.WriteLine(exception);
+                        Console.WriteLine(exception);
                     }
                 });
 
@@ -157,6 +157,7 @@ namespace GameServer.ReverseProxy
                     string serverEndpoint = null;
                     try
                     {
+                        Console.WriteLine($"Request server for matchid {matchId}");
                         serverEndpoint = await detailsFactory.RequestMultiplayerServer(alias, matchId);
                     }
                     catch (Exception)
@@ -173,7 +174,33 @@ namespace GameServer.ReverseProxy
                         return;
                     }
 
-                    await Task.Delay(new TimeSpan(0, 0, 5));
+                    var retryCounter = 0;
+                    var RETRY_MAX = 10;
+                    while(true) {
+                        var details = await detailsFactory.GetMultiplayerServerDetails(matchId);
+                        Console.WriteLine($"Get server details for {matchId} in state {details.State}");
+
+                        if(details.State == "Terminating" || retryCounter == RETRY_MAX) {
+                            context.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+                            Console.WriteLine($"Server for matchid {matchId} terminating or retry counter hit..");
+                            return;
+                        }
+
+                        if(details.State == "Active") {
+                            Console.WriteLine($"Server for matchid {matchId} active .. starting forwarder..");
+                            var uriBuilder = new UriBuilder(details.FQDN)
+                            {
+                                Port = ServerEndpointFactory.GetEndpointPortNumber(details.Ports)
+                            };
+
+                            serverEndpoint = uriBuilder.ToString();
+
+                            break;
+                        }
+
+                        retryCounter++;
+                        await Task.Delay(1000);
+                    }
 
                     var error = await forwarder.SendAsync(context,
                         serverEndpoint,
@@ -185,7 +212,7 @@ namespace GameServer.ReverseProxy
                         var errorFeature = context.GetForwarderErrorFeature();
                         var exception = errorFeature.Exception;
 
-                        System.Console.WriteLine(exception);
+                        Console.WriteLine(exception);
                     }
                 });
             });
