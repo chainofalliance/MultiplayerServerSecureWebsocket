@@ -80,6 +80,7 @@ namespace GameServer.ReverseProxy
 
                 endpoints.Map("/{matchId:guid}/{queueName}/{**forwardPath}", async context =>
                 {
+                    Console.WriteLine("MATCH ROUTE");
                     var detailsFactory = context.RequestServices.GetRequiredService<ServerEndpointFactory>();
                     await detailsFactory.ValidateEntityToken();
 
@@ -129,6 +130,7 @@ namespace GameServer.ReverseProxy
 
                 endpoints.Map("/request-match/{matchId:guid}", async context =>
                 {
+                    Console.WriteLine("REQUEST MATCH ROUTE");
                     var env = _configuration.GetSection("Environment").Get<string>();
 
                     var routeValues = context.GetRouteData().Values;
