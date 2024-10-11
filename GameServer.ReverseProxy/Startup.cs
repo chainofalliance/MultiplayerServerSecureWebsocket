@@ -126,7 +126,7 @@ namespace GameServer.ReverseProxy
                     }
                 });
 
-                endpoints.Map("/request-match/{matchId:guid}", async context =>
+                endpoints.Map("/request-match/{matchId:guid}/{**forwardPath}", async context =>
                 {
                     Console.WriteLine("REQUEST MATCH ROUTE");
                     var env = _configuration.GetSection("Environment").Get<string>();
