@@ -157,7 +157,7 @@ namespace GameServer.ReverseProxy
                     string serverEndpoint = null;
                     try
                     {
-                        serverEndpoint = await detailsFactory.RequestMultiplayerServer(alias, matchId);
+                        serverEndpoint = await detailsFactory.RequestMultiplayerServer(env, alias, matchId);
                     }
                     catch (Exception)
                     {

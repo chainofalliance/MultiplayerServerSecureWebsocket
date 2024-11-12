@@ -97,11 +97,21 @@ namespace GameServer.ReverseProxy
             return null;
         }
 
-        public async Task<string> RequestMultiplayerServer(string alias, Guid matchId)
+
+        private string PreferredRegion(string env) => env switch
+            {
+                "dev" => "NorthEurope",
+                "prod_eu" => "NorthEurope",
+                "prod_us" => "EastUs",
+                "prod_asia" => "EastUs",  //Change to asia when available
+                _ => throw new Exception($"Couldnt find region for {env}")
+            };
+
+        public async Task<string> RequestMultiplayerServer(string env, string alias, Guid matchId)
         {
             var response = await _multiplayerApi.RequestMultiplayerServerAsync(new RequestMultiplayerServerRequest
             {
-                PreferredRegions = new List<string>() { "NorthEurope" },
+                PreferredRegions = new List<string>() { PreferredRegion(env) },
                 SessionId = matchId.ToString(),
                 BuildAliasParams = new BuildAliasParams { AliasId = alias },
                 SessionCookie = "AI"
