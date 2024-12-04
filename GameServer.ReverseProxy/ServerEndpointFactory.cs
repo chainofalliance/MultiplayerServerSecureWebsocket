@@ -102,8 +102,8 @@ namespace GameServer.ReverseProxy
             {
                 "dev" => "NorthEurope",
                 "prod_eu" => "NorthEurope",
-                "prod_us" => "EastUs",
-                "prod_asia" => "EastUs",  //Change to asia when available
+                "prod_us" => "WestUs",
+                "prod_asia" => "CentralIndia",
                 _ => throw new Exception($"Couldnt find region for {env}")
             };
 
